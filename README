@@ -1,0 +1,78 @@
+
+README
+=====
+
+
+
+
+
+Setup
+-----
+
+- Use the httpd.conf below:
+# MOD_CLUSTER_ADDS
+# Adjust to you hostname and subnet.
+
+MaxClients 400
+
+<IfModule manager_module>
+  Listen 8000
+  ManagerBalancerName mycluster
+  ReduceDisplay off
+  <VirtualHost *:8000>
+    <Location />
+     Order deny,allow
+     Allow from all
+    </Location>
+
+    KeepAliveTimeout 20
+    MaxKeepAliveRequests 0
+    ServerAdvertise off
+    AdvertiseFrequency 30
+    #AdvertiseSecurityKey secret
+    #AdvertiseGroup @ADVIP@:23364
+    EnableMCPMReceive
+
+    <Location /mod_cluster_manager>
+       SetHandler mod_cluster-manager
+       Order deny,allow
+       Allow from all
+    </Location>
+
+  </VirtualHost>
+</IfModule>
+
+
+
+- Use the run.sh script below to start a JBoss 7 instance:
+./standalone.sh -Djboss.node.name=$1 \
+                -Djboss.server.data.dir=$HOME/$1 \
+                -Djboss.server.temp.dir=$HOME/$1 \
+                -b $IP_ADDR -c standalone-ha.xml
+
+
+
+- Modify standalone-ha.xml:
+ 
+  * modcluster:
+    <subsystem xmlns="urn:jboss:domain:modcluster:1.0">
+         <mod-cluster-config advertise-socket="modcluster" 
+                         proxy-list="192.168.1.5:8000,192.168.1.10:8000" 
+                         advertise="false" sticky-session="true"/>
+    </subsystem>
+
+
+  Make sure to adjust proxy-list.
+
+  * Add a connector to the web subsystems:
+    <connector name="ajp" protocol="AJP/1.3" 
+               socket-binding="ajp" 
+               max-connections="400"/>
+
+  * Add an AJP connector:
+    <socket-binding name="ajp" port="8009"/>
+
+
+- Further modifications:
+  * JGroups and Infinispan configs in standalone-ha.xml
+  * Update JGroups and Infinispan versions to 3.1 and 5.2 (possibly snapshots)

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<jboss-web>
+
+  <replication-config>
+  
+     <replication-granularity>ATTRIBUTE</replication-granularity>
+
+     <replication-trigger>SET</replication-trigger>   
+     
+  </replication-config>
+
+</jboss-web>
