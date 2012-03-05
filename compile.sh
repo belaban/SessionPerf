@@ -1,11 +1,11 @@
 
-CP=./classes
+CP=./target/classes
 
 for i in lib/*.jar
 do
     CP=$CP:./${i}
 done
 
-mkdir classes
+mkdir -p target/classes
 
-javac -classpath $CP -d classes src/perf/*.java
+javac -classpath $CP -d target/classes src/perf/*.java

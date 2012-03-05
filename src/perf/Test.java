@@ -20,8 +20,7 @@ public class Test {
     private Client[] clients;
     private CyclicBarrier barrier;
 
-    private volatile
-    static NumberFormat f;
+    private volatile static NumberFormat f;
 
     static {
         f=NumberFormat.getNumberInstance();
@@ -48,12 +47,8 @@ public class Test {
         System.out.println("Waiting for clients to initialize");
         barrier.await();
         
-        long overallStart = System.currentTimeMillis();
-        
         System.out.println("Waiting for clients to complete");
         barrier.await();
-        
-        long overallFinish = System.currentTimeMillis();
         
         long total_time=0, total_bytes_read=0, total_bytes_written=0;
         int total_successful_reads=0, total_successful_writes=0, total_failed_reads=0, total_failed_writes=0;
@@ -82,15 +77,10 @@ public class Test {
         int total_requests=total_successful_reads + total_successful_writes;
         double avg_time=total_time / num_clients;
         double reqs_sec=total_requests / (avg_time / 1000.0);
-        long overall_time = overallStart - overallFinish;
-//        double overall_avg_time = overall_time / num_clients;
-//        double overall_reqs_sec = total_requests / (overall_avg_time / 1000.0);
 
         System.out.println("\nTotal requests: " + total_requests + " in (avg) " + (avg_time / 1000.0) + " secs");
         System.out.println("\n*** " + f.format(reqs_sec) + " requests/sec, requests/sec/client: " +
                 f.format((total_requests / num_clients) / (avg_time / 1000.0)) + " ***\n");
-//        System.out.println("\n*** " + f.format(overall_reqs_sec) + " requests/sec, requests/sec/client: " +
-//              f.format((total_requests / num_clients) / (overall_avg_time / 1000.0)) + " ***\n");
 
         System.out.println("Successful reads: " + total_successful_reads + ", successful writes: " + total_successful_writes);
         System.out.println("Failed reads: " + total_failed_reads + ", failed writes: " + total_failed_writes);

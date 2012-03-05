@@ -3,7 +3,7 @@
 #
 
 
-CP=./classes
+CP=./target/classes
 
 for i in lib/*.jar
 do
