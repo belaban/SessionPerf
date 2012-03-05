@@ -8,7 +8,7 @@ for server in $KILL_SERVERS
 do
     echo "Killing @$server"
 
-    ssh $server.qa.atl.jboss.com killall -9 java
+    ssh $server killall -9 java
 done
 
 
