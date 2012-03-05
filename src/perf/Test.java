@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Test {
     private final Client[]      clients;
     private final CyclicBarrier barrier;
+    private final int           num_requests;
     private final int           num_attrs;
     private final int           size;
     private final int           num_threads;
@@ -27,7 +28,6 @@ public class Test {
     private final URL           write_url;
     private final URL           destroy_url;
     private final AtomicInteger curr_num_reqs=new AtomicInteger(0);
-    private final int           expected_reqs; // num_threads * num_requests
     private final int           print;
 
     private volatile static NumberFormat f=NumberFormat.getNumberInstance();
@@ -45,8 +45,8 @@ public class Test {
         this.size=size;
         this.num_threads=num_threads;
         this.read_percentage=read_percentage;
-        this.expected_reqs=num_threads * num_requests;
-        this.print=expected_reqs / 10;
+        this.num_requests=num_requests;
+        this.print=num_requests / 10;
 
         String tmp="http://" + host + "/";
         this.setup_url=new URL(tmp + setup_url + "?num_attrs=" + num_attrs + "&size=" + size);
@@ -63,7 +63,7 @@ public class Test {
 
 
     private void start() throws Exception {
-        System.out.println("\nStarting " + num_threads + " clients for a total of " + expected_reqs + " requests");
+        System.out.println("\nStarting " + num_threads + " clients for a total of " + num_requests + " requests");
         for(int i=0; i < clients.length; i++) {
             clients[i]=new Client();
             clients[i].start();
@@ -156,10 +156,10 @@ public class Test {
     
 
     public static void main(String[] args) throws Exception {
-        int num_threads=1;
-        int num_requests=1000;
-        int num_attrs=25;
-        int size=1000;
+        int num_threads=10;
+        int num_requests=10000;
+        int num_attrs=40;
+        int size=2500;
         int read_percentage=90; // percent
         String host="localhost:8000";
         String setup_url="web/setup.jsp";
@@ -275,7 +275,7 @@ public class Test {
         private void loop() throws IOException {
             for(;;) {
                 int req=curr_num_reqs.incrementAndGet();
-                if(req > expected_reqs)
+                if(req > num_requests)
                     break;
 
                 int random=(int)random(100);
@@ -303,7 +303,7 @@ public class Test {
                     }                    
                 }
                 if(print > 0 && req % print == 0)
-                    log(req + " / " + expected_reqs);
+                    log(req + " / " + num_requests);
             }
         }
 
