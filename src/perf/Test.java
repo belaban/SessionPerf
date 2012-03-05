@@ -206,8 +206,6 @@ public class Test {
             return;
         }
 
-        // CookieHandler.setDefault(new MyCookieHandler());
-
         new Test().start(host, silent, setup_url, read_url, write_url, destroy_url, num_threads, num_requests, num_attrs, size, write_percentage);
     }
 
@@ -254,7 +252,7 @@ public class Test {
         public void run() {
             boolean inited = false;
             try {
-                init(num_attrs, size);
+                init();
                 log("inited: " + barrier.getNumberWaiting() + " threads waiting");
                 try { barrier.await(); } finally { inited = true; }
                 start=System.currentTimeMillis();
@@ -309,7 +307,7 @@ public class Test {
         }
 
         /** Create NUM_SESSIONS sessions with NUM_ATTRS attributes of SIZE size. Total size is multiplication of the 3 */
-        private void init(int num_attrs, int size) throws IOException {
+        private void init() throws IOException {
             executeRequest(setup_url);
         }
 
