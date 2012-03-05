@@ -1,53 +1,75 @@
 package perf;
 
 
-import javax.naming.NamingException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.NumberFormat;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Tests web session clustering performance
  * @author Bela Ban
  */
 public class Test {
-    private Client[] clients;
-    private CyclicBarrier barrier;
+    private final Client[]      clients;
+    private final CyclicBarrier barrier;
+    private final int           num_attrs;
+    private final int           size;
+    private final int           num_threads;
+    private final int           read_percentage;
+    private final URL           setup_url;
+    private final URL           read_url;
+    private final URL           write_url;
+    private final URL           destroy_url;
+    private final AtomicInteger curr_num_reqs=new AtomicInteger(0);
+    private final int           expected_reqs; // num_threads * num_requests
+    private final int           print;
 
-    private volatile static NumberFormat f;
+    private volatile static NumberFormat f=NumberFormat.getNumberInstance();
 
     static {
-        f=NumberFormat.getNumberInstance();
         f.setGroupingUsed(false);
         f.setMaximumFractionDigits(2);
     }
 
 
 
-    private void start(String host, boolean silent, String setup_url, String read_url, String write_url, String destroy_url,
-                       int num_threads, int num_requests, int num_attrs, int size, int write_percentage)
-            throws NamingException, BrokenBarrierException, InterruptedException, MalformedURLException {
+    public Test(String host, int num_requests, int num_attrs, int size, int num_threads, int read_percentage,
+                String setup_url, String read_url, String write_url, String destroy_url) throws Exception {
+        this.num_attrs=num_attrs;
+        this.size=size;
+        this.num_threads=num_threads;
+        this.read_percentage=read_percentage;
+        this.expected_reqs=num_threads * num_requests;
+        this.print=expected_reqs / 10;
+
+        String tmp="http://" + host + "/";
+        this.setup_url=new URL(tmp + setup_url + "?num_attrs=" + num_attrs + "&size=" + size);
+        this.read_url=new URL(tmp + read_url + "?id=");
+        this.write_url=new URL(tmp + write_url + "?size=" + size + "&id=");
+        this.destroy_url=new URL(tmp + destroy_url);
+
         this.clients=new Client[num_threads];
         this.barrier=new CyclicBarrier(num_threads + 1);
+    }
 
-        System.out.println("Starting " + num_threads + " clients");
+
+
+
+
+    private void start() throws Exception {
+        System.out.println("\nStarting " + num_threads + " clients for a total of " + expected_reqs + " requests");
         for(int i=0; i < clients.length; i++) {
-            Client client=new Client(barrier, host, silent, setup_url, read_url, write_url, destroy_url, write_percentage,
-                                     num_requests, num_attrs, size);
-            clients[i]=client;
-            client.start();
+            clients[i]=new Client();
+            clients[i].start();
         }
 
-        System.out.println("Waiting for clients to initialize");
         barrier.await();
-        
-        System.out.println("Waiting for clients to complete");
         barrier.await();
         
         long total_time=0, total_bytes_read=0, total_bytes_written=0;
@@ -55,17 +77,16 @@ public class Test {
 
         int num_clients=0;
         for(Client client: clients) {
-            if(!client.isSuccessful()) {
+            if(!client.successful)
                 continue;
-            }
             num_clients++;
             total_time+=client.getTime();
-            total_bytes_read+=client.getBytesRead();
-            total_bytes_written+=client.getBytesWritten();
-            total_successful_reads+=client.getSuccessfulReads();
-            total_successful_writes+=client.getSuccessfulWrites();
-            total_failed_reads+=client.getFailedReads();
-            total_failed_writes+=client.getFailedWrites();
+            total_bytes_read+=client.bytes_read;
+            total_bytes_written+=client.bytes_written;
+            total_successful_reads+=client.successful_reads;
+            total_successful_writes+=client.successful_writes;
+            total_failed_reads+=client.failed_reads;
+            total_failed_writes+=client.failed_writes;
         }
 
         if(num_clients < 1) {
@@ -129,15 +150,18 @@ public class Test {
     }
 
 
+     private static long random(long range) {
+         return (long)((Math.random() * 100000) % range) + 1;
+     }
+    
 
     public static void main(String[] args) throws Exception {
         int num_threads=1;
         int num_requests=1000;
         int num_attrs=25;
         int size=1000;
-        int write_percentage=10; // percent
-        boolean silent=false;
-        String host="localhost";
+        int read_percentage=90; // percent
+        String host="localhost:8000";
         String setup_url="web/setup.jsp";
         String read_url="web/read.jsp";
         String write_url="web/write.jsp";
@@ -146,10 +170,6 @@ public class Test {
         for(int i=0; i < args.length; i++) {
             if(args[i].equals("-host")) {
                 host=args[++i];
-                continue;
-            }
-            if(args[i].equals("-silent")) {
-                silent=true;
                 continue;
             }
             if(args[i].equals("-setup_url")) {
@@ -184,10 +204,10 @@ public class Test {
                 size=Integer.parseInt(args[++i]);
                 continue;
             }
-            if(args[i].equals("-write_percentage")) {
-                write_percentage=Integer.parseInt(args[++i]);
-                if(write_percentage < 0 || write_percentage > 100) {
-                    System.err.println("write_percentage (" + write_percentage + ") has to be >= 0 && <= 100");
+            if(args[i].equals("-read_percentage")) {
+                read_percentage=Integer.parseInt(args[++i]);
+                if(read_percentage < 0 || read_percentage > 100) {
+                    System.err.println("read_percentage (" + read_percentage + ") has to be >= 0 && <= 100");
                     return;
                 }
                 continue;
@@ -196,105 +216,52 @@ public class Test {
             return;
         }
 
-        new Test().start(host, silent, setup_url, read_url, write_url, destroy_url, num_threads, num_requests, num_attrs, size, write_percentage);
+        Test test=new Test(host, num_requests, num_attrs, size, num_threads, read_percentage,
+                           setup_url, read_url, write_url, destroy_url);
+        test.start();
     }
 
     private static void help() {
-        System.out.println("Test [-host <host[:port] of apache>] [-silent] [-read_url <URL>] " +
+        System.out.println("Test [-host <host[:port] of apache>] [-read_url <URL>] " +
                 "[-num_threads <number of client sessions>] " +
                 "[-write_url <URL>] [-setup_url <URL>] [-destroy_url <URL>] [-num_requests <requests>] " +
-                "[-num_attrs <attrs>] [-size <bytes>] [-write_percentage <percentage, 0-100>]");
+                "[-num_attrs <attrs>] [-size <bytes>] [-read_percentage <percentage, 0-100>]");
     }
 
 
-    private static class Client extends Thread {
-        private final int           read_percentage;
-        private final int           num_requests, num_attrs, size;
-        private final URL           setup_url, read_url, write_url, destroy_url;
-        private final CyclicBarrier barrier;
+    private class Client extends Thread {
         private int                 successful_reads=0, failed_reads=0, successful_writes=0, failed_writes=0;
         private long                bytes_read=0, bytes_written=0;
         private long                start=0, stop=0;
         private boolean             successful=true;
         private final byte[]        buffer=new byte[1024];
         private String              cookie=null;
-        private boolean             silent=false;
 
 
-
-
-        private Client(CyclicBarrier barrier, String host, boolean silent,
-                       String setup_url, String read_url, String write_url, String destroy_url,
-                       int write_percentage, int num_requests, int num_attrs, int size) throws MalformedURLException {
-            this.barrier=barrier;
-            this.silent=silent;
-            this.read_percentage=100 - write_percentage;
-            this.num_requests=num_requests;
-            this.num_attrs=num_attrs;
-            this.size=size;
-            String tmp="http://" + host + "/";
-            this.setup_url=new URL(tmp + setup_url + "?num_attrs=" + num_attrs + "&size=" + size);
-            this.read_url=new URL(tmp + read_url + "?id=");
-            this.write_url=new URL(tmp + write_url + "?size=" + size + "&id=");
-            this.destroy_url=new URL(tmp + destroy_url);
-        }
 
         public void run() {
-            boolean inited = false;
+            boolean initialized = false;
             try {
                 init();
-                log("inited: " + barrier.getNumberWaiting() + " threads waiting");
-                try { barrier.await(); } finally { inited = true; }
+                try { barrier.await(); } finally { initialized = true; }
                 start=System.currentTimeMillis();
-                loop(num_requests);
+                loop();
             }
             catch(Exception e) {
                 error("failure", e);
                 successful=false;
-                if (!inited)
+                if (!initialized)
                    try { barrier.await(); }  catch(Exception e1) {}
             }
             finally {
                 stop=System.currentTimeMillis();
                 try {terminate();} catch(IOException e) {}
-                log("completed: " + barrier.getNumberWaiting() + " threads waiting");
                 try {barrier.await();} catch(Exception e) {}
             }
         }
 
+        public long getTime() {return stop - start;}
 
-
-        public long getBytesRead() {
-            return bytes_read;
-        }
-
-        public long getBytesWritten() {
-            return bytes_written;
-        }
-
-        public int getFailedReads() {
-            return failed_reads;
-        }
-
-        public int getFailedWrites() {
-            return failed_writes;
-        }
-
-        public int getSuccessfulReads() {
-            return successful_reads;
-        }
-
-        public int getSuccessfulWrites() {
-            return successful_writes;
-        }
-        
-        public long getTime() {
-            return stop - start;
-        }
-
-        public boolean isSuccessful() {
-            return successful;
-        }
 
         /** Create NUM_SESSIONS sessions with NUM_ATTRS attributes of SIZE size. Total size is multiplication of the 3 */
         private void init() throws IOException {
@@ -303,21 +270,19 @@ public class Test {
 
         private void terminate() throws IOException {
             executeRequest(destroy_url);
-            if(!silent)
-                log("destroyed session");
         }
 
-        private void loop(int num_requests) throws IOException {
-            int random, id;
-            int print=num_requests / 10;
-            int rc, total=0;
+        private void loop() throws IOException {
+            for(;;) {
+                int req=curr_num_reqs.incrementAndGet();
+                if(req > expected_reqs)
+                    break;
 
-            for(int i=0; i < num_requests; i++) {
-                random=(int)random(100);
-                id=(int)random(num_attrs -1);
+                int random=(int)random(100);
+                int id=(int)random(num_attrs -1);
                 if(random <= read_percentage) { // read
                     URL tmp=new URL(read_url + String.valueOf(id));
-                    rc=executeRequest(tmp);
+                    int rc=executeRequest(tmp);
                     if(rc == 200) {
                         successful_reads++;
                         bytes_read+=size; // bytes read from the session, not by the HttpClient !
@@ -328,7 +293,7 @@ public class Test {
                 }
                 else {             // write
                     URL tmp=new URL(write_url + String.valueOf(id));
-                    rc=executeRequest(tmp);
+                    int rc=executeRequest(tmp);
                     if(rc == 200) {
                         successful_writes++;
                         bytes_written+=size; // bytes read from the session, not by the HttpClient !
@@ -337,9 +302,8 @@ public class Test {
                         failed_writes++;
                     }                    
                 }
-                total++;
-                if(!silent && print > 0 && total % print == 0)
-                    log(total + " / " + num_requests);
+                if(print > 0 && req % print == 0)
+                    log(req + " / " + expected_reqs);
             }
         }
 
@@ -359,16 +323,8 @@ public class Test {
                 }
                 input.close(); // discard data
                 String tmp_cookie=conn.getHeaderField("set-cookie");
-                if(tmp_cookie != null) {
-                    if (cookie == null) {
-                        cookie=tmp_cookie;
-                        if(!silent)
-                            System.out.println("set-cookie: " + cookie);
-                    }
-                    else if (!silent) {
-                        System.out.println("Cookie changed: was: " + cookie + " is: " + tmp_cookie);
-                    }
-                }
+                if(tmp_cookie != null && cookie == null)
+                    cookie=tmp_cookie;
                 return conn.getResponseCode();
             }
             finally {
@@ -379,11 +335,11 @@ public class Test {
 
 
 
-        private static void log(String msg) {
+        private void log(String msg) {
             System.out.println("[thread-" + Thread.currentThread().getId() + "]: " + msg);
         }
 
-        private static void error(String msg, Throwable th) {
+        private void error(String msg, Throwable th) {
             String tmp="[thread-" + Thread.currentThread().getId() + "]: " + msg;
             if(th != null) {
                 tmp+=", ex: " + th + "\n";
@@ -396,34 +352,8 @@ public class Test {
             System.err.println(tmp);
         }
 
-        private static long random(long range) {
-            return (long)((Math.random() * 100000) % range) + 1;
-        }
     }
 
-
-
-//    private static class MyCookieHandler extends CookieHandler {
-//        Map<URI,List<String>> cookies=new HashMap<URI,List<String>>();
-//
-//        public Map<String, List<String>> get(URI uri, Map<String, List<String>> requestHeaders) throws IOException {
-//            Map<String,List<String>> map=new HashMap<String,List<String>>();
-//            List<String> list=cookies.get(uri);
-//            if(list == null) {
-//                list=new LinkedList<String>();
-//                cookies.put(uri, list);
-//            }
-//            map.put("cookie", list);
-//            return Collections.unmodifiableMap(map);
-//        }
-//
-//        public void put(URI uri, Map<String, List<String>> responseHeaders) throws IOException {
-//            List<String> list=responseHeaders.get("Set-Cookie");
-//            if(list != null) {
-//                cookies.get(uri).addAll(list);
-//            }
-//        }
-//    }
 
 
 }
