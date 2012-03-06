@@ -70,17 +70,19 @@ public class Test {
         }
 
         barrier.await();
+        long start=System.currentTimeMillis();
+
         barrier.await();
+        long total_time=System.currentTimeMillis() - start;
         
-        long total_time=0, total_bytes_read=0, total_bytes_written=0;
-        int total_successful_reads=0, total_successful_writes=0, total_failed_reads=0, total_failed_writes=0;
+        long total_bytes_read=0, total_bytes_written=0;
+        int  total_successful_reads=0, total_successful_writes=0, total_failed_reads=0, total_failed_writes=0;
 
         int num_clients=0;
         for(Client client: clients) {
             if(!client.successful)
                 continue;
             num_clients++;
-            total_time+=client.getTime();
             total_bytes_read+=client.bytes_read;
             total_bytes_written+=client.bytes_written;
             total_successful_reads+=client.successful_reads;
@@ -96,20 +98,19 @@ public class Test {
 
         int failed_clients=num_threads - num_clients;
         int total_requests=total_successful_reads + total_successful_writes;
-        double avg_time=total_time / num_clients;
-        double reqs_sec=total_requests / (avg_time / 1000.0);
+        double reqs_sec=total_requests / (total_time / 1000.0);
+        double reqs_sec_client=reqs_sec / num_clients;
 
-        System.out.println("\nTotal requests: " + total_requests + " in (avg) " + (avg_time / 1000.0) + " secs");
-        System.out.println("\n*** " + f.format(reqs_sec) + " requests/sec, requests/sec/client: " +
-                f.format((total_requests / num_clients) / (avg_time / 1000.0)) + " ***\n");
+        System.out.println("\nTotal requests: " + total_requests + " in " + (total_time / 1000.0) + " secs");
+        System.out.println("\n\033[1m" + f.format(reqs_sec) + " requests/sec, requests/sec/client: " +
+                             f.format(reqs_sec_client) + "\033[0m\n");
 
-        System.out.println("Successful reads: " + total_successful_reads + ", successful writes: " + total_successful_writes);
-        System.out.println("Failed reads: " + total_failed_reads + ", failed writes: " + total_failed_writes);
-        System.out.println("Bytes read: " + printBytes(total_bytes_read) + ", bytes written: " + printBytes(total_bytes_written));
-        System.out.println("Bytes read/sec: " + printBytes(total_bytes_read / (avg_time / 1000.0)) + ", bytes written/sec: " +
-                printBytes(total_bytes_written / (avg_time / 1000.0)));
-        System.out.println("Total client: " + num_clients + ", failed clients: " + failed_clients);
+        System.out.println("Successful reads: " + total_successful_reads + ", successful writes: " + total_successful_writes
+                             + " (failed reads: " + total_failed_reads + ", failed writes: " + total_failed_writes + ")");
+        System.out.println("Read: " + printBytes(total_bytes_read) + ", written: " + printBytes(total_bytes_written));
+        System.out.println("Successful clients: " + num_clients + ", failed clients: " + failed_clients + "\n");
     }
+    
 
     private static String printBytes(long bytes) {
         double tmp;
@@ -232,7 +233,6 @@ public class Test {
     private class Client extends Thread {
         private int                 successful_reads=0, failed_reads=0, successful_writes=0, failed_writes=0;
         private long                bytes_read=0, bytes_written=0;
-        private long                start=0, stop=0;
         private boolean             successful=true;
         private final byte[]        buffer=new byte[1024];
         private String              cookie=null;
@@ -244,7 +244,6 @@ public class Test {
             try {
                 init();
                 try { barrier.await(); } finally { initialized = true; }
-                start=System.currentTimeMillis();
                 loop();
             }
             catch(Exception e) {
@@ -254,13 +253,10 @@ public class Test {
                    try { barrier.await(); }  catch(Exception e1) {}
             }
             finally {
-                stop=System.currentTimeMillis();
                 try {terminate();} catch(IOException e) {}
                 try {barrier.await();} catch(Exception e) {}
             }
         }
-
-        public long getTime() {return stop - start;}
 
 
         /** Create NUM_SESSIONS sessions with NUM_ATTRS attributes of SIZE size. Total size is multiplication of the 3 */
