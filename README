@@ -18,6 +18,10 @@ MaxClients 400
 <IfModule manager_module>
   Listen 8000
   ManagerBalancerName mycluster
+  Maxcontext 100
+  Maxnode 40
+  Maxhost 40
+  Maxsessionid 400
   ReduceDisplay off
   <VirtualHost *:8000>
     <Location />
