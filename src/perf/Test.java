@@ -157,10 +157,10 @@ public class Test {
     
 
     public static void main(String[] args) throws Exception {
-        int num_threads=10;
-        int num_requests=10000;
-        int num_attrs=40;
-        int size=2500;
+        int num_threads=50;
+        int num_requests=100000;
+        int num_attrs=10;
+        int size=1000;
         int read_percentage=90; // percent
         String host="localhost:8000";
         String setup_url="web/setup.jsp";
