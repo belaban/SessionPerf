@@ -68,7 +68,7 @@ MaxClients 400
 
   Make sure to adjust proxy-list.
 
-  * Add a connector to the web subsystems:
+  * Add a connector to the web subsystem:
     <connector name="ajp" protocol="AJP/1.3" 
                socket-binding="ajp" 
                max-connections="400"/>
