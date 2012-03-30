@@ -50,11 +50,14 @@ MaxClients 400
 
 - Use the run.sh script below to start a JBoss 7 instance:
 ./standalone.sh -Djboss.node.name=$1 \
+                -Dinstance-id=$1 \
                 -Djboss.server.data.dir=/tmp/$1 \
                 -Djboss.server.temp.dir=/tmp/$1 \
                 -b $IP_ADDR -c standalone-ha.xml
 
-
+  * Parameterize instance-id in jboss:domain:web:1.1:
+<subsystem xmlns="urn:jboss:domain:web:1.1" default-virtual-server="default-host" instance-id="${instance-id}" native="false">
+  
 
 - Modify standalone-ha.xml:
  
@@ -70,7 +73,7 @@ MaxClients 400
 
   * Add a connector to the web subsystem:
     <connector name="ajp" protocol="AJP/1.3" 
-               socket-binding="ajp" 
+               scheme="ajp" socket-binding="ajp" 
                max-connections="400"/>
 
   * Add an AJP connector:
