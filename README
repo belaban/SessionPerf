@@ -50,8 +50,8 @@ MaxClients 400
 
 - Use the run.sh script below to start a JBoss 7 instance:
 ./standalone.sh -Djboss.node.name=$1 \
-                -Djboss.server.data.dir=$HOME/$1 \
-                -Djboss.server.temp.dir=$HOME/$1 \
+                -Djboss.server.data.dir=/tmp/$1 \
+                -Djboss.server.temp.dir=/tmp/$1 \
                 -b $IP_ADDR -c standalone-ha.xml
 
 
@@ -75,6 +75,10 @@ MaxClients 400
 
   * Add an AJP connector:
     <socket-binding name="ajp" port="8009"/>
+
+  ===> *******************************************************
+  ===> these 2 changes above are not needed in 7.1.1 anymore !
+  ===> *******************************************************
 
 
 - Further modifications:
