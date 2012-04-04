@@ -2,6 +2,7 @@
 *.iws
 *.ipr
 *.iml
+*.pdf
 .project
 .classpath
 .idea/
