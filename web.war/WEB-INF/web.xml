@@ -6,7 +6,10 @@
 
 
     <display-name>JBoss World HTTP session replication demo</display-name>
-    <!-- --><distributable/><!-- -->
+    <session-config>
+        <session-timeout>1</session-timeout>
+    </session-config>
+    <distributable/>
 
 
 
