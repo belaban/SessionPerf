@@ -1,3 +1,3 @@
 
 # Runs a JBoss domain controller
-./domain.sh -Dinstance-id=master
+./domain.sh -Djboss.domain.servers.dir=/tmp/master_servers

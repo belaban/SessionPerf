@@ -61,7 +61,7 @@ MaxClients 500
 - Modify domain.xml:
 
   * Parameterize instance-id in jboss:domain:web:1.1:
-    <subsystem xmlns="urn:jboss:domain:web:1.1" default-virtual-server="default-host" instance-id="${instance-id}" native="false">
+    <subsystem xmlns="urn:jboss:domain:web:1.1" default-virtual-server="default-host" instance-id="${jboss.node.name:undefined}" native="false">
   
  
   * modcluster:
