@@ -11,9 +11,12 @@ Setup
 
 - Use the httpd.conf below:
 # MOD_CLUSTER_ADDS
-# Adjust to you hostname and subnet.
+# Adjust to your hostname and subnet.
 
-MaxClients 400
+ServerLimit 20
+ThreadsPerChild 50
+StartServers 10
+MaxClients 500
 
 <IfModule manager_module>
   Listen 8000
@@ -48,16 +51,14 @@ MaxClients 400
 
 
 
-- Use the run.sh script below to start a JBoss 7 instance:
-./standalone.sh -Djboss.node.name=$1 \
-                -Dinstance-id=$1 \
-                -Djboss.server.data.dir=/tmp/$1 \
-                -Djboss.server.temp.dir=/tmp/$1 \
-                -b $IP_ADDR -c standalone-ha.xml
+- Use the run-master.sh script below to start a JBoss 7 domain controller:
+  ./run-master.sh
+
+- Use the run-slave.sh script to start N slave host controllers:
+  ./run-slave.sh 2 // name ('2') needs to be unique for every slave
 
 
-
-- Modify standalone-ha.xml:
+- Modify domain.xml:
 
   * Parameterize instance-id in jboss:domain:web:1.1:
     <subsystem xmlns="urn:jboss:domain:web:1.1" default-virtual-server="default-host" instance-id="${instance-id}" native="false">
@@ -76,7 +77,7 @@ MaxClients 400
   * Change the AJP connector:
     <connector name="ajp" protocol="AJP/1.3" 
                scheme="ajp" socket-binding="ajp" 
-               max-connections="400"/>
+               max-connections="410"/>
 
   * Change <interfaces>:
     <interfaces>
