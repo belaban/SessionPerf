@@ -75,7 +75,7 @@ public class Test {
         barrier.await();
         long total_time=System.currentTimeMillis() - start;
         
-        long total_bytes_read=0, total_bytes_written=0;
+        long total_bytes_read=0, total_bytes_written=0, total_client_bytes_read=0;
         int  total_successful_reads=0, total_successful_writes=0, total_failed_reads=0, total_failed_writes=0;
 
         int num_clients=0;
@@ -84,6 +84,7 @@ public class Test {
                 continue;
             num_clients++;
             total_bytes_read+=client.bytes_read;
+            total_client_bytes_read+=client.client_bytes_read;
             total_bytes_written+=client.bytes_written;
             total_successful_reads+=client.successful_reads;
             total_successful_writes+=client.successful_writes;
@@ -107,7 +108,8 @@ public class Test {
 
         System.out.println("Successful reads: " + total_successful_reads + ", successful writes: " + total_successful_writes
                              + " (failed reads: " + total_failed_reads + ", failed writes: " + total_failed_writes + ")");
-        System.out.println("Read: " + printBytes(total_bytes_read) + ", written: " + printBytes(total_bytes_written));
+        System.out.println("Read: " + printBytes(total_bytes_read) + ", written: " + printBytes(total_bytes_written) +
+                             ", HTTP responses: " + printBytes(total_client_bytes_read));
         System.out.println("Successful clients: " + num_clients + ", failed clients: " + failed_clients + "\n");
     }
     
@@ -232,7 +234,7 @@ public class Test {
 
     private class Client extends Thread {
         private int                 successful_reads=0, failed_reads=0, successful_writes=0, failed_writes=0;
-        private long                bytes_read=0, bytes_written=0;
+        private long                bytes_read=0, bytes_written=0, client_bytes_read=0;
         private boolean             successful=true;
         private final byte[]        buffer=new byte[1024];
         private String              cookie=null;
@@ -312,10 +314,11 @@ public class Test {
                 conn=(HttpURLConnection)url.openConnection(); // not yet connected
                 if(cookie != null)
                     conn.setRequestProperty("Cookie", cookie);
-                
+
+                int num;
                 input=conn.getInputStream(); // NOW it is connected
-                while(input.read(buffer) > 0) {
-                    ;
+                while((num=input.read(buffer)) > 0) {
+                    client_bytes_read+=num;
                 }
                 input.close(); // discard data
                 String tmp_cookie=conn.getHeaderField("set-cookie");
