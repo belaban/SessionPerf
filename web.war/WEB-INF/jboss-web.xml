@@ -10,4 +10,8 @@
      
   </replication-config>
 
+    <passivation-config>
+        <use-session-passivation>false</use-session-passivation>
+    </passivation-config>
+
 </jboss-web>
