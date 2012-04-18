@@ -9,12 +9,12 @@ do
     echo "Killing @$server"
 
     ssh $server killall -9 java
-    ssh $server rm -fr /tmp/servers/one/log 
-    ssh $server rm -fr /tmp/servers/two/log
+#    ssh $server rm -fr /tmp/servers/one/log 
+ #   ssh $server rm -fr /tmp/servers/two/log
 done
 
-ssh cluster01 rm -fr /tmp/master/one/log 
-ssh cluster01 rm -fr /tmp/master/two/log
+#ssh cluster01 rm -fr /tmp/master/one/log 
+#ssh cluster01 rm -fr /tmp/master/two/log
 
 
 
