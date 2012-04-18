@@ -23,6 +23,7 @@ public class Test {
     private final int           size;
     private final int           num_threads;
     private final int           read_percentage;
+    private final long          sleep_time;
     private final URL           setup_url;
     private final URL           read_url;
     private final URL           write_url;
@@ -40,11 +41,12 @@ public class Test {
 
 
     public Test(String host, int num_requests, int num_attrs, int size, int num_threads, int read_percentage,
-                String setup_url, String read_url, String write_url, String destroy_url) throws Exception {
+                long sleep_time, String setup_url, String read_url, String write_url, String destroy_url) throws Exception {
         this.num_attrs=num_attrs;
         this.size=size;
         this.num_threads=num_threads;
         this.read_percentage=read_percentage;
+        this.sleep_time=sleep_time;
         this.num_requests=num_requests;
         this.print=num_requests / 10;
 
@@ -164,6 +166,7 @@ public class Test {
         int num_attrs=10;
         int size=1000;
         int read_percentage=90; // percent
+        long sleep=0; // sleep time between requests (in ms)
         String host="localhost:8000";
         String setup_url="web/setup.jsp";
         String read_url="web/read.jsp";
@@ -215,18 +218,22 @@ public class Test {
                 }
                 continue;
             }
+            if(args[i].equals("-sleep")) {
+                sleep=Long.parseLong(args[++i]);
+                continue;
+            }
             help();
             return;
         }
 
-        Test test=new Test(host, num_requests, num_attrs, size, num_threads, read_percentage,
+        Test test=new Test(host, num_requests, num_attrs, size, num_threads, read_percentage, sleep,
                            setup_url, read_url, write_url, destroy_url);
         test.start();
     }
 
     private static void help() {
         System.out.println("Test [-host <host[:port] of apache>] [-read_url <URL>] " +
-                "[-num_threads <number of client sessions>] " +
+                "[-num_threads <number of client sessions>] [-sleep <sleep in ms between requests>] " +
                 "[-write_url <URL>] [-setup_url <URL>] [-destroy_url <URL>] [-num_requests <requests>] " +
                 "[-num_attrs <attrs>] [-size <bytes>] [-read_percentage <percentage, 0-100>]");
     }
@@ -302,6 +309,13 @@ public class Test {
                 }
                 if(print > 0 && req % print == 0)
                     log(req + " / " + num_requests);
+                if(sleep_time > 0) {
+                    try {
+                        Thread.sleep(sleep_time);
+                    }
+                    catch(InterruptedException e) {
+                    }
+                }
             }
         }
 
