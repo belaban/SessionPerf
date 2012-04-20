@@ -11,7 +11,7 @@
 
         <!-- Change this to the cache required: repl-sync, repl-async, dist-sync, dist-async, see Infinispan
          section in domain.xml-->
-        <cache-name>repl-async</cache-name>
+        <cache-name>web.repl-async</cache-name>
 
         <replication-trigger>SET</replication-trigger>
 
