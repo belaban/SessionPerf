@@ -7,7 +7,7 @@
 
 <%
     // response.setHeader("Cache-Control", "no-cache");
-    int num_attrs=40;
+    int num_attrs=10;
     int size=1000;
 
     String num_attrs_str=request.getParameter("num_attrs");
