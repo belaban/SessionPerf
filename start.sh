@@ -2,7 +2,7 @@
 
 
 
-source config.sh
+source ./config.sh
 
 if [ $# -ne 1 ]
 then
