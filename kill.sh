@@ -3,7 +3,7 @@
 source config.sh
 
 
-for server in $KILL_SERVERS
+for server in $SERVERS
 do
     echo "Killing ${PREFIX}$server"
 
