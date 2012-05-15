@@ -1,14 +1,12 @@
 #!/bin/sh
 
-
-SERVERS=${SERVERS-"cluster01 cluster02 cluster03 cluster04 cluster05 cluster06 cluster07 cluster08"}
-
+source config.sh
 
 for server in $SERVERS
 do
-    echo "Executing $1 on @$server:"
+    echo "Executing $1 on ${PREFIX}$server:"
 
-    ssh $server "$1"
+    ssh ${PREFIX}$server "$1"
 
 done
 
