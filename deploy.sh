@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-source config.sh
+source ./config.sh
 
 
 for server in $SERVERS
